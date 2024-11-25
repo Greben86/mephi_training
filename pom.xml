@@ -23,6 +23,7 @@
         <module>exercise_Java_2.6</module>
         <module>exercise_Java_6.9</module>
         <module>exercise_OOP_2.7</module>
+        <module>exercise_Algorithm_3.11</module>
     </modules>
 
     <dependencyManagement>

@@ -1,0 +1,43 @@
+- hosts: host_for_nginx
+  become: yes
+  tasks:
+  - name: "Установка nginx"
+    ansible.builtin.apt:
+      name: "nginx"
+      state: "latest"
+      update_cache: yes
+
+  - name: "Удаляем все что есть в каталоге /var/www/html"
+    ansible.builtin.file:
+      path: "/var/www/html/index.html"
+      state: "absent"
+
+  - name: "Копируем свою страницу в каталог /var/www/html"
+    ansible.builtin.copy:
+      src: "files/index.html"
+      dest: "/var/www/html/index.html"
+      owner: "vi"
+      group: "vi"
+      mode: "0655"
+
+- hosts: host_for_apache
+  become: yes
+  tasks:
+    - name: "Установка apache2"
+      apt:
+        name: "apache2"
+        update_cache: yes
+        state: "latest"
+
+    - name: "Активируем mod_rewrite"
+      apache2_module:
+        name: "rewrite"
+        state: "present"
+      notify:
+        - "restart apache2"
+
+  handlers:
+    - name: "restart apache2"
+      service:
+        name: "apache2"
+        state: "restarted"

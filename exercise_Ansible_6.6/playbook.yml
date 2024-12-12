@@ -1,0 +1,9 @@
+- hosts: host_for_nginx
+  become: yes
+  roles:
+    - role: Nginx
+
+- hosts: host_for_apache
+  become: yes
+  roles:
+    - role: Apache2

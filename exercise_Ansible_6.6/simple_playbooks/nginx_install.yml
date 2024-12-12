@@ -1,0 +1,21 @@
+- hosts: "host_for_nginx"
+  become: true
+  tasks:
+  - name: "Установка nginx"
+    ansible.builtin.apt:
+      name: "nginx"
+      state: "latest"
+      update_cache: true
+
+  - name: "Удаляем все что есть в каталоге /var/www/html"
+    ansible.builtin.file:
+      path: "/var/www/html/index.html"
+      state: "absent"
+
+  - name: "Копируем свою страницу в каталог /var/www/html"
+    ansible.builtin.copy:
+      src: "files/index.html"
+      dest: "/var/www/html/index.html"
+      owner: "vi"
+      group: "vi"
+      mode: "0655"

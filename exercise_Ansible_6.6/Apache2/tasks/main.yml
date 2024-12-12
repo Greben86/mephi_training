@@ -1,0 +1,14 @@
+---
+# tasks file for Apache2
+- name: "Установка apache2"
+  apt:
+    name: "apache2"
+    update_cache: yes
+    state: "latest"
+
+- name: "Активируем mod_rewrite"
+  apache2_module:
+    name: "rewrite"
+    state: "present"
+  notify:
+    - "restart apache2"

@@ -1,0 +1,6 @@
+- name: Play 1
+  hosts: host_for_nginx
+  tasks:
+
+    - name: Who am I
+      ansible.builtin.command: whoami

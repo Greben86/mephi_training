@@ -1,7 +1,8 @@
 package mephi.exercise;
 
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.Scanner;
-import java.util.Stack;
 
 public class SimpleCalculator {
     public static void main(String[] args) {
@@ -20,7 +21,7 @@ public class SimpleCalculator {
         Double operandA;
         Double operandB;
         String operation = "";
-        Stack<Double> operands = new Stack<>();
+        Deque<Double> operands = new ArrayDeque<>();
         while (true) {
             try {
                 if (operands.isEmpty()) {

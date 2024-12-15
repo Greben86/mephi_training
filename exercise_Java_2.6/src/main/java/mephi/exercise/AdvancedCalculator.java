@@ -1,10 +1,11 @@
 package mephi.exercise;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Deque;
 import java.util.List;
 import java.util.Scanner;
-import java.util.Stack;
 
 public class AdvancedCalculator {
 
@@ -72,12 +73,12 @@ public class AdvancedCalculator {
         }
 
         // Записываем коллекцию в стек в обратном порядке, для того чтобы на вершине стека оказался самый первый элемент
-        Stack<Character> operationStack = new Stack<>();
+        Deque<Character> operationStack = new ArrayDeque<>(operationList.size());
         for (int index = operationList.size()-1; index >=0; index--) {
             operationStack.push(operationList.get(index));
         }
 
-        Stack<Double> operandStack = new Stack<>();
+        Deque<Double> operandStack = new ArrayDeque<>();
         for (int index = operandList.size()-1; index >=0; index--) {
             operandStack.push(operandList.get(index));
         }

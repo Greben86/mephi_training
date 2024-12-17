@@ -1,0 +1,11 @@
+grpc:
+  client:
+    advice_service:
+      address: advicecontainer:9090
+      negotiation-type: plaintext
+    auth_service:
+      address: authcontainer:9091
+      negotiation-type: plaintext
+    time_service:
+      address: timecontainer:9092
+      negotiation-type: plaintext

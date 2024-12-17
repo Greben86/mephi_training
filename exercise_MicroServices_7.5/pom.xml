@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>mephi.exercise</groupId>
+        <artifactId>education</artifactId>
+        <version>1.0.0</version>
+    </parent>
+
+    <artifactId>exercise_MicroServices_7.5</artifactId>
+    <packaging>pom</packaging>
+    <modules>
+        <module>interface-grpc</module>
+        <module>microService_AdviceService</module>
+        <module>microService_AuthService</module>
+        <module>microService_TimeService</module>
+        <module>microService_gateway</module>
+    </modules>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <grpc.version>1.64.0</grpc.version>
+        <protobuf.version>3.25.1</protobuf.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>io.grpc</groupId>
+                <artifactId>grpc-stub</artifactId>
+                <version>${grpc.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.grpc</groupId>
+                <artifactId>grpc-protobuf</artifactId>
+                <version>${grpc.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>jakarta.annotation</groupId>
+                <artifactId>jakarta.annotation-api</artifactId>
+                <optional>true</optional>
+                <version>1.3.5</version>
+            </dependency>
+            <dependency>
+                <groupId>com.google.protobuf</groupId>
+                <artifactId>protobuf-java</artifactId>
+                <scope>compile</scope>
+                <version>${protobuf.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-annotations</artifactId>
+                <version>2.15.2</version>
+            </dependency>
+            <dependency>
+                <groupId>net.devh</groupId>
+                <artifactId>grpc-server-spring-boot-autoconfigure</artifactId>
+                <version>2.14.0.RELEASE</version>
+            </dependency>
+            <dependency>
+                <groupId>net.devh</groupId>
+                <artifactId>grpc-client-spring-boot-autoconfigure</artifactId>
+                <version>2.14.0.RELEASE</version>
+            </dependency>
+            <dependency>
+                <groupId>mephi.exercise</groupId>
+                <artifactId>interface-grpc</artifactId>
+                <scope>compile</scope>
+                <version>1.0.0</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+</project>

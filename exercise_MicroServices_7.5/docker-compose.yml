@@ -1,0 +1,58 @@
+version: "3.8"
+services:
+  gateway_service:
+    build:
+      context: ./microService_gateway
+      dockerfile: gateway.Dockerfile
+    ports:
+      - "8080:8080"
+    networks:
+      - grpc-network
+    depends_on:
+      - advice_service
+      - auth_service
+      - time_service
+
+  advice_service:
+    build:
+      context: ./microService_AdviceService
+      dockerfile: advice.Dockerfile
+    ports:
+      - "9090:9090"
+    networks:
+      - grpc-network
+    container_name: advicecontainer
+
+  auth_service:
+    build:
+      context: ./microService_AuthService
+      dockerfile: auth.Dockerfile
+    ports:
+      - "9091:9091"
+    networks:
+      - grpc-network
+    container_name: authcontainer
+
+  time_service:
+    build:
+      context: ./microService_TimeService
+      dockerfile: time.Dockerfile
+    ports:
+      - "9092:9092"
+    networks:
+      - grpc-network
+    container_name: timecontainer
+
+  grpcurl_service:
+    build:
+      context: .
+      dockerfile: grpcurl.Dockerfile
+    depends_on:
+      - time_service
+    networks:
+      - grpc-network
+    container_name: grpcurlcontainer
+
+networks:
+  grpc-network:
+    driver: bridge

@@ -1,0 +1,62 @@
+version: "3.8"
+services:
+  gateway_service:
+    build:
+      context: ./apiGatewayService
+      dockerfile: gateway.Dockerfile
+    environment:
+      ADVICE_SERVICE_ADDRESS: advicecontainer:9090
+      AUTH_SERVICE_ADDRESS: authcontainer:9091
+      TIME_SERVICE_ADDRESS: timecontainer:9092
+    ports:
+      - "8080:8080"
+    networks:
+      - grpc-network
+    depends_on:
+      - advice_service
+      - auth_service
+      - time_service
+
+  advice_service:
+    build:
+      context: ./serviceAdvice
+      dockerfile: advice.Dockerfile
+    environment:
+      SERVICE_PORT: 9090
+    networks:
+      - grpc-network
+    container_name: advicecontainer
+
+  auth_service:
+    build:
+      context: ./serviceAuth
+      dockerfile: auth.Dockerfile
+    environment:
+      SERVICE_PORT: 9091
+    networks:
+      - grpc-network
+    container_name: authcontainer
+
+  time_service:
+    build:
+      context: ./serviceTime
+      dockerfile: time.Dockerfile
+    environment:
+      SERVICE_PORT: 9092
+    networks:
+      - grpc-network
+    container_name: timecontainer
+
+  grpcurl_service:
+    build:
+      context: .
+      dockerfile: grpcurl.Dockerfile
+    depends_on:
+      - time_service
+    networks:
+      - grpc-network
+    container_name: grpcurlcontainer
+
+networks:
+  grpc-network:
+    driver: bridge

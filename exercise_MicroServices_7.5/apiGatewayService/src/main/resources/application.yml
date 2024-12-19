@@ -1,0 +1,11 @@
+grpc:
+  client:
+    advice_service:
+      address: ${ADVICE_SERVICE_ADDRESS}
+      negotiation-type: plaintext
+    auth_service:
+      address: ${AUTH_SERVICE_ADDRESS}
+      negotiation-type: plaintext
+    time_service:
+      address: ${TIME_SERVICE_ADDRESS}
+      negotiation-type: plaintext

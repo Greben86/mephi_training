@@ -13,6 +13,7 @@
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <apache.commons.version>3.16.0</apache.commons.version>
         <httpclient.version>4.5.14</httpclient.version>
         <gson.version>2.11.0</gson.version>
         <lombok.version>1.18.34</lombok.version>
@@ -25,7 +26,7 @@
         <module>exercise_OOP_2.7</module>
         <module>exercise_Algorithm_3.11</module>
         <module>exercise_DevOps_4.6</module>
-        <module>exercise_MicroServices_7.5</module>
+<!--        <module>exercise_MicroServices_7.5</module>-->
         <module>exam_Java</module>
         <module>exam_OOP</module>
         <module>exam_Algorithm</module>
@@ -33,6 +34,11 @@
 
     <dependencyManagement>
         <dependencies>
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-lang3</artifactId>
+                <version>${apache.commons.version}</version>
+            </dependency>
             <dependency>
                 <groupId>org.apache.httpcomponents</groupId>
                 <artifactId>httpclient</artifactId>

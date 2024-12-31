@@ -1,0 +1,13 @@
+mephi.exercise.entity.User 727844574013310195;1;viktor;55f312f84e7785aa1efa552acbf251db;8130
+mephi.exercise.entity.User 727844574013310195;2;vasia;d125a874318684c7d491a20acbd3b879;20
+mephi.exercise.entity.Category 6950804747428155000;1;1;на проезд;null;null
+mephi.exercise.entity.Category 6950804747428155000;2;1;на пиво;2000;600
+mephi.exercise.entity.Operation 5825084285742431299;1;1;-1;2025.01.11 13:07:47;10000
+mephi.exercise.entity.Operation 5825084285742431299;2;1;1;2025.01.11 13:08:46;-100
+mephi.exercise.entity.Operation 5825084285742431299;3;1;2;2025.01.11 13:11:35;-1000
+mephi.exercise.entity.Operation 5825084285742431299;4;1;2;2025.01.11 13:12:15;-400
+mephi.exercise.entity.Operation 5825084285742431299;5;1;1;2025.01.11 13:13:00;-150
+mephi.exercise.entity.Operation 5825084285742431299;6;1;-1;2025.01.11 13:13:11;-300
+mephi.exercise.entity.Operation 5825084285742431299;7;2;-1;2025.01.11 14:13:58;100
+mephi.exercise.entity.Operation 5825084285742431299;8;2;-1;2025.01.11 14:14:08;-80
+mephi.exercise.entity.Operation 5825084285742431299;9;1;-1;2025.01.11 14:14:08;80

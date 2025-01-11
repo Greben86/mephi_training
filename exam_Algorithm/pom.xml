@@ -21,7 +21,6 @@
             <artifactId>heroes</artifactId>
             <scope>system</scope>
             <systemPath>${basedir}/libs/heroes_task_lib-1.0-SNAPSHOT.jar</systemPath>
-<!--            <systemPath>/home/viktor/Документы/projects/mephi_training/exam_Algorithm/libs/heroes_task_lib-1.0-SNAPSHOT.jar</systemPath>-->
             <version>1</version>
         </dependency>
     </dependencies>

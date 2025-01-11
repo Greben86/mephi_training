@@ -7,80 +7,93 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+/**
+ * Поиск юнитов, подходящих для атаки
+ */
 public class SuitableForAttackUnitsFinderImpl implements SuitableForAttackUnitsFinder {
+    private static final int DIMENSION_Y = 21;
 
+    /**
+     * Метод определяет список юнитов, подходящих для атаки, для атакующего юнита одной из армий.
+     * Цель метода — исключить ненужные попытки найти кратчайший путь между юнитами,
+     * которые не могут атаковать друг друга.
+     * Сложность: O(n*m) - (n - количество колонок, m - количество юнитов в колонке)
+     *  - делаю обход колонок в цикле, в зависимости от того с какой стороны армия, это будет прямой или обратный обход
+     *  - при обходе запоминаю юниты колонки в массив, при следующей итерации использую сохраненные данные,
+     *    чтоб понять есть ли юнит перед текущим в этой же строке
+     *
+     * @param unitsByRow юниты по строкам
+     * @param isLeftArmyTarget параметр, указывающий, юниты какой армии подвергаются атаке
+     * @return список юнитов, подходящих для атаки
+     */
     @Override
     public List<Unit> getSuitableUnits(List<List<Unit>> unitsByRow, boolean isLeftArmyTarget) {
-        System.out.println("!!SuitableForAttackUnitsFinderImpl!!");
-        ArrayList var3 = new ArrayList();
-        byte var10000;
-        if (!isLeftArmyTarget) {
-            var10000 = 2;
-            int a = 82;
-            if ((a * a + a + 7) % 81 == 0) {
+        var resultList = new ArrayList<Unit>();
+
+        try {
+            var prevRow = new Unit[DIMENSION_Y];
+            var iterator = getIterator(unitsByRow, isLeftArmyTarget);
+            while(iterator.hasNext()) {
+                List<Unit> row = iterator.next();
+                row.forEach(unit -> {
+                    // Если по этой линии нет другого юнита (видимость по координате Y), считаем что юнит доступен
+                    if (prevRow[unit.getyCoordinate()] == null) {
+                        resultList.add(unit);
+                    }
+
+                    prevRow[unit.getyCoordinate()] = unit;
+                });
             }
+        } catch (Exception e) {
+            System.err.println("SuitableForAttackUnitsFinderImpl: " + e.getMessage());
+            throw e;
+        }
+
+        return resultList;
+    }
+
+    /**
+     * Метод определяет итератор для обхода строк
+     * Если атакуется левая армия - нужен обратный итератор
+     * Если атакуется правая армия - нужен прямой итератор
+     *
+     * @param unitsByRow юниты по строкам
+     * @param isLeftArmyTarget параметр, указывающий, юниты какой армии подвергаются атаке
+     * @return прямой или обратный итератор
+     */
+    private <T> Iterator<T> getIterator(List<T> unitsByRow, boolean isLeftArmyTarget) {
+        if (isLeftArmyTarget) {
+            // Доступные для атаки юниты у левой армии - нужен обратный итератор
+            return new ReverseIterator<>(unitsByRow);
         } else {
-            var10000 = 0;
+            // Доступные для атаки юниты у правой армии - нужен прямой итератор
+            return unitsByRow.iterator();
+        }
+    }
+
+    /**
+     * Обратный итератор
+     *
+     * @param <T> тип элементов итератора
+     */
+    public static class ReverseIterator<T> implements Iterator<T> {
+        private final List<T> list;
+        private int position;
+
+        public ReverseIterator(List<T> list) {
+            this.list = list;
+            this.position = list.size();
         }
 
-        byte var4;
-        label68: {
-            var4 = var10000;
-            if (isLeftArmyTarget) {
-                var10000 = -1;
-
-                if (7 * (var10000 + 8) * (var10000 + 8) - 1 - var10000 == 0) {
-                    break label68;
-                }
-            } else {
-                var10000 = 1;
-            }
-
-            isLeftArmyTarget = var10000>0;
-            var10000 = 0;
+        @Override
+        public boolean hasNext() {
+            return position > 0;
         }
 
-        int var5 = var10000;
-
-        while(var5 < unitsByRow.size()) {
-            Iterator var6 = ((List)unitsByRow.get(var5)).iterator();
-
-            label61:
-            while(true) {
-                if (!var6.hasNext()) {
-                    ++var5;
-                    if (7 * (var5 + 58) * (var5 + 58) - 1 - var5 != 0) {
-                        break;
-                    }
-                }
-
-                Unit var7;
-                if ((var7 = (Unit)var6.next()).isAlive() || (a + 1) % 2 == 0) {
-                    while(true) {
-                        while(var5 != var4) {
-                            int var8;
-                            if ((var8 = var5 - (isLeftArmyTarget?1:0)) >= 0 && var8 < unitsByRow.size() && !((List)unitsByRow.get(var8)).stream().anyMatch((var1x) -> var1x.getyCoordinate() == var7.getyCoordinate() && var1x.isAlive())) {
-                                var3.add(var7);
-                            }
-
-                            if ((a + 1) % 2 != 0) {
-                                continue label61;
-                            }
-                        }
-
-                        var3.add(var7);
-                        if (7 * (a + 84) * (a + 84) - 1 - a != 0) {
-                            break;
-                        }
-                    }
-                }
-            }
+        @Override
+        public T next() {
+            position--;
+            return list.get(position);
         }
-
-        if (var3.isEmpty()) {
-            System.out.println("Unit can not find target for attack!");
-        }
-
-        return var3;
     }
 }

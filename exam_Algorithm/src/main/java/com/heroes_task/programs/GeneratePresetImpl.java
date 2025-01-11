@@ -4,92 +4,96 @@ import com.battle.heroes.army.Army;
 import com.battle.heroes.army.Unit;
 import com.battle.heroes.army.programs.GeneratePreset;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
 
+/**
+ * Генерация пресета
+ */
 public class GeneratePresetImpl implements GeneratePreset {
+    private static final int MAX_COUNT_UNITS_FOR_TYPE = 11;
+    private static final int DIMENSION_X = 3;
+    private static final int DIMENSION_Y = 21;
 
+    /**
+     * Метод генерации пресета, сложность O(n*m), где n - число типов юнитов, а m - максимальное число юнитов в
+     * армии одного типа, так как максимально возможное количество юнитов на карте это 11 * [количество типов],
+     * по этому алгоритм такой:
+     *  - выполняю 11 * [количество типов] итераций в цикле
+     *  - постепенно добавляю юниты каждого типа, пока их не станет 11 или не кончатся ресурсы
+     *  - это сделано чтобы типы юнитов распределились равномерно
+     *
+     * @param unitList список типов юнитов
+     * @param maxPoints максимальная стоимость армии
+     * @return сгенерированная армия
+     */
     @Override
-    public Army generate(List<Unit> unitList, int maxPoints) {
-        Army var3 = new Army();
-        ArrayList var4 = new ArrayList();
-        HashMap var5 = new HashMap();
-        Random random = new Random();
-        int var7 = 0;
-        unitList.sort((var0, var1x) -> {
-            double var2 = (double)var0.getBaseAttack() / (double)var0.getCost();
-            double temp;
-            if (Double.compare(temp = (double)var1x.getBaseAttack() / (double)var1x.getCost(), var2) != 0) {
-                return Double.compare(temp, var2);
-            } else {
-                double var6 = (double)var0.getHealth() / (double)var0.getCost();
-                return Double.compare((double)var1x.getHealth() / (double)var1x.getCost(), var6);
-            }
-        });
-        LinkedList var14 = new LinkedList(unitList);
-
-        while(maxPoints > 0 && !var14.isEmpty()) {
-            Unit var8;
-            String var9 = (var8 = (Unit)var14.peek()).getUnitType();
-            int var10 = var8.getCost();
-            int var11;
-            if ((var11 = (Integer)var5.getOrDefault(var9, 0)) < 11 && maxPoints >= var10) {
-                int[] var12;
-                if ((var12 = this.findAvailableCoordinates(var4, var9, random, 0)) != null) {
-                    int var13 = var12[0];
-                    int var17 = var12[1];
-                    ++var11;
-                    var5.put(var9, var11);
-                    var9 = var9 + " " + var11;
-                    var8 = new Unit(var9, var8.getUnitType(), var8.getHealth(), var8.getBaseAttack(), var8.getCost(), var8.getAttackType(), var8.getAttackBonuses(), var8.getDefenceBonuses(), var13, var17);
-
-                    while(true) {
-                        var4.add(var8);
-                        System.out.println("Added " + var4.size() + " unit");
-                        var3.getUnits().add(var8);
-                        maxPoints -= var10;
-                        var7 += var10;
-                        int a = 0;
-                        if ((a + 1) % 2 == 0) {
-                            continue;
-                        }
-                    }
-                } else {
-                    System.out.println("Not found units coordinates: " + var9);
-                }
+    public Army generate(final List<Unit> unitList, final int maxPoints) {
+        var random = new Random();
+        var countOfUnits = new int[unitList.size()];
+        var grid = new Unit[DIMENSION_X][DIMENSION_Y];
+        var allCosts = 0;
+        var indexType = 0;
+        var selectedUnits = new ArrayList<Unit>();
+        for (int index = 0; index < MAX_COUNT_UNITS_FOR_TYPE * unitList.size(); index++) {
+            var localIndex = indexType;
+            var template = unitList.get(indexType);
+            indexType++;
+            if (indexType >= unitList.size()) {
+                indexType = 0;
             }
 
-            while(true) {
-                if (var11 >= 11) {
-                    var14.poll();
-                }
-                int a = 0;
-                if ((a + 1) % 2 != 0) {
-                    break;
-                }
+            // Проверяем хватит ли ресурсов на покупку
+            if (maxPoints - allCosts < template.getCost()) {
+                continue;
             }
+
+            // Проверяем не превышен ли лимит по типу юнитов
+            var count = countOfUnits[localIndex];
+            if (count == MAX_COUNT_UNITS_FOR_TYPE) {
+                continue;
+            }
+
+            count++;
+            countOfUnits[localIndex] = count;
+            selectedUnits.add(buildUnitFromTemplate(template, count, random, grid));
+            allCosts += template.getCost();
         }
 
-        System.out.println("Used points: " + var7);
-        return var3;
+        var computerArmy = new Army();
+        computerArmy.setUnits(selectedUnits);
+        computerArmy.setPoints(allCosts);
+        return computerArmy;
     }
 
-    private int[] findAvailableCoordinates(List<Unit> var1, String var2, Random var3, int var4) {
-        while(var4 < 100) {
-            int var5 = var3.nextInt(21);
-            int var6 = var3.nextInt(3);
-            if (!var1.stream().anyMatch((var2x) -> var2x.getxCoordinate() == var6 && var2x.getyCoordinate() == var5)) {
-                return new int[]{var6, var5};
-            }
-
-            while(true) {
-                ++var4;
-                int a = 0;
-                if ((a + 1) % 2 != 0) {
-                    break;
-                }
-            }
-        }
-
-        return null;
+    /**
+     * Создание нового юнита с уникальным именем и координатами
+     *
+     * @param template шаблон юнита
+     * @param index номер юнита
+     * @param random генератор случайных чисел
+     * @param grid сетка размещения юнитов на карте
+     * @return готовый юнит
+     */
+    private Unit buildUnitFromTemplate(final Unit template, final int index, final Random random, final Unit[][] grid) {
+        int xCoordinate, yCoordinate;
+        do {
+            xCoordinate = random.nextInt(DIMENSION_X);
+            yCoordinate = random.nextInt(DIMENSION_Y);
+        } while (grid[xCoordinate][yCoordinate] != null);
+        var name = template.getUnitType() + " " + index;
+        grid[xCoordinate][yCoordinate] = new Unit(
+                name,
+                template.getUnitType(),
+                template.getHealth(),
+                template.getBaseAttack(),
+                template.getCost(),
+                template.getAttackType(),
+                template.getAttackBonuses(),
+                template.getDefenceBonuses(),
+                xCoordinate,
+                yCoordinate);
+        return grid[xCoordinate][yCoordinate];
     }
 }

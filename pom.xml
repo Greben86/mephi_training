@@ -26,10 +26,11 @@
         <module>exercise_OOP_2.7</module>
         <module>exercise_Algorithm_3.11</module>
         <module>exercise_DevOps_4.6</module>
-<!--        <module>exercise_MicroServices_7.5</module>-->
         <module>exam_Java</module>
         <module>exam_OOP</module>
         <module>exam_Algorithm</module>
+        <module>exercise_MicroServices_7.5</module>
+        <module>exercise_Concurent_3.10</module>
     </modules>
 
     <dependencyManagement>

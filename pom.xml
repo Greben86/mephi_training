@@ -31,6 +31,7 @@
         <module>exam_Algorithm</module>
         <module>exercise_MicroServices_7.5</module>
         <module>exercise_Concurent_3.10</module>
+        <module>exam_Concurent</module>
     </modules>
 
     <dependencyManagement>

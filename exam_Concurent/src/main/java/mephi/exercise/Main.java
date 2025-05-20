@@ -1,24 +1,40 @@
 package mephi.exercise;
 
-import java.util.concurrent.Future;
+import lombok.extern.slf4j.Slf4j;
+import mephi.exercise.pool.CustomExecutorImpl;
+import mephi.exercise.pool.CustomThreadFactory;
 
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+
+@Slf4j
 public class Main {
 
-    public static void main(String[] args) {
-        var executor = CustomExecutorImpl.newCustomThreadPool(new CustomThreadFactory());
+    public static void main(String[] args) throws InterruptedException {
+        final var pool = new CustomExecutorImpl(
+                2,  // corePoolSize
+                10,  // maxPoolSize
+                1L,  // keepAliveTime
+                TimeUnit.SECONDS,
+                10,  // queueSize
+                1,   // minSpareThreads
+                new CustomThreadFactory()
+        );
         for (int i = 0; i < 50; i++) {
-            executor.execute(Main::exampleTask);
+            pool.execute(Main::exampleTask);
         }
+//        executor.shutdown();
         for (int i = 0; i < 50; i++) {
-            Future<String> future = executor.submit(Main::exampleFutureTask);
+            Future<String> future = pool.submit(Main::exampleFutureTask);
         }
-        executor.shutdown();
+//        Thread.sleep(1000);
+        pool.shutdown();
     }
 
     private static void exampleTask() {
         try {
-            Thread.sleep(100);
-            System.out.println("123");
+            TimeUnit.MILLISECONDS.sleep(120);
+            log.info("123");
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -26,8 +42,8 @@ public class Main {
 
     private static String exampleFutureTask() {
         try {
-            Thread.sleep(100);
-            System.out.println("321");
+            TimeUnit.MILLISECONDS.sleep(100);
+            log.info("321");
             return "success";
         } catch (Exception e) {
             throw new RuntimeException(e);

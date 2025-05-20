@@ -1,4 +1,4 @@
-package mephi.exercise;
+package mephi.exercise.pool;
 
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executor;

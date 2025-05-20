@@ -37,7 +37,7 @@ public class CustomExecutorImpl implements CustomExecutor {
     private final AtomicBoolean shutdownFlag = new AtomicBoolean(false);
     private Map<Integer, Worker> workers;
     private Map<Integer, BlockingQueue<Runnable>> queues;
-    private RoundRobinLoadBalancer<Worker> balancer;
+    private LoadBalancer balancer;
 
     public CustomExecutorImpl(int corePoolSize, int maxPoolSize, long keepAliveTime, TimeUnit timeUnit, int queueSize,
                               int minSpareThreads, ThreadFactory threadFactory) {
@@ -61,18 +61,19 @@ public class CustomExecutorImpl implements CustomExecutor {
     private void init() {
         workers = new HashMap<>(maxPoolSize);
         queues = new HashMap<>(maxPoolSize);
-        balancer = new RoundRobinLoadBalancer<>(workers);
+        balancer = new LoadBalancer(workers);
         for (int i = 0; i < corePoolSize; i++) {
-            startNewWork();
+            startNewWorker();
         }
     }
 
-    private void startNewWork() {
-        int id = currentPoolSize.incrementAndGet();
-        Worker worker = new Worker(id, this::nextTask);
+    private int startNewWorker() {
+        final int id = currentPoolSize.incrementAndGet();
+        Worker worker = new Worker(id, this::nextTask, this::statusForIdleWorker);
         workers.put(id, worker);
         queues.put(id, new ArrayBlockingQueue<>(queueSize));
         threadFactory.newThread(worker).start();
+        return id;
     }
 
     private Runnable nextTask(final int id) throws InterruptedException {
@@ -81,6 +82,36 @@ public class CustomExecutorImpl implements CustomExecutor {
             return queue.poll(keepAliveTime, timeUnit);
         }
         return null;
+    }
+
+    private Status statusForIdleWorker(final int id) {
+        if (shutdownFlag.get()) {
+            return Status.STOPPED;
+        }
+
+        mainLock.lock();
+        try {
+            // Ищем ожидающих
+            final var count = waitingWorkersCount();
+
+            log.info("Count of waiting workers = {}, min of waiting workers = {}", count, minSpareThreads);
+            if (count > minSpareThreads) {
+                // Этот воркер будет остановлен - удаляем его из списка
+                workers.remove(id);
+                currentPoolSize.decrementAndGet();
+                return Status.STOPPED;
+            }
+
+            return Status.WAITING;
+        } finally {
+            mainLock.unlock();
+        }
+    }
+
+    private long waitingWorkersCount() {
+        return workers.values().stream()
+                .filter(worker -> Status.WAITING.equals(worker.getStatus()))
+                .count();
     }
 
     @Override
@@ -97,12 +128,15 @@ public class CustomExecutorImpl implements CustomExecutor {
             final int activeCount = activeThreads.get();
             final int currentSize = currentPoolSize.get();
 
+            // Если
+            final int id;
             if (activeCount >= currentSize && currentSize < maxPoolSize) {
-                startNewWork();
+                id = startNewWorker();
                 log.info("Created new worker thread. Current pool size: {}", currentPoolSize.get());
+            } else {
+                id = balancer.getNextThreadId();
             }
 
-            final int id = balancer.getNextThreadId();
             final var targetQueue = queues.get(id);
             final var task = new TaskWrapper(command);
             if (!targetQueue.offer(task)) {
@@ -110,6 +144,8 @@ public class CustomExecutorImpl implements CustomExecutor {
             } else {
                 log.warn("Task submitted to queue {}", id);
             }
+        } catch (RejectedExecutionException e) {
+            log.error("Task rejected", e);
         } finally {
             mainLock.unlock();
         }
@@ -132,34 +168,40 @@ public class CustomExecutorImpl implements CustomExecutor {
     @Override
     public void shutdown() {
         shutdownFlag.getAndSet(true);
+        log.info("shutdown = {}", shutdownFlag.get());
     }
 
     @Override
     public void shutdownNow() {
         mainLock.lock();
         try {
-            shutdownFlag.set(true);
+            shutdown();
             workers.forEach((id, worker) -> worker.stop());
         } finally {
             mainLock.unlock();
         }
     }
 
-    private void manageThreadPool() {
-        Long currentTime = System.currentTimeMillis();
-        workers.entrySet().removeIf(worker ->
-                currentTime - worker.getValue().getLastTaskTime() > keepAliveTime);
-
-    }
-
     @RequiredArgsConstructor
-    public static class RoundRobinLoadBalancer<T> {
-        private final Map<Integer, T> threads;
+    public static class LoadBalancer {
+        private final Map<Integer, Worker> threads;
         private int currentIndex = 0;
 
         public int getNextThreadId() {
+            // Сперва ищем свободные
+            final var waitingWorkerId = threads.entrySet().stream()
+                    .filter(entry -> Status.WAITING.equals(entry.getValue().getStatus()))
+                    .map(Map.Entry::getKey)
+                    .findAny();
+            if (waitingWorkerId.isPresent()) {
+                return waitingWorkerId.get();
+            }
+
+            // Если свободных нет, то используем принцип round robin
+            currentIndex = Math.min(currentIndex, threads.size() - 1);
             int index = 0;
-            for (Map.Entry<Integer, T> entry : threads.entrySet()) {
+            for (Map.Entry<Integer, Worker> entry : threads.entrySet()) {
+                // Выбираем случайный воркер
                 if (index == currentIndex) {
                     currentIndex = (currentIndex + 1) % threads.size();
                     return entry.getKey();

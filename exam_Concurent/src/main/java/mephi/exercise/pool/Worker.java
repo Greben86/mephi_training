@@ -10,27 +10,25 @@ public class Worker implements Runnable {
 
     private boolean running = true;
     private final int id;
-    private final InterruptedSupplier<Runnable> supplier;
+    private final InterruptedSupplier<Runnable> supplierTask;
+    private final InterruptedSupplier<Status> supplierCheck;
     @Getter
     private Status status = Status.WAITING;
-    @Getter
-    private Long lastTaskTime = System.currentTimeMillis();
 
     @Override
     public void run() {
         Runnable task;
         try {
             do {
-                while (running && (task = supplier.get(id)) != null) {
-                    lastTaskTime = System.currentTimeMillis();
+                while (running && (task = supplierTask.get(id)) != null) {
                     status = Status.RUNNING;
                     task.run();
                 }
                 status = Status.WAITING;
-            } while (running);
-            status = Status.STOPPED;
+            } while ((status = supplierCheck.get(id)) != Status.STOPPED);
             log.info("Worker was stopped");
         } catch (InterruptedException e) {
+            status = Status.STOPPED;
             log.error(e.getMessage());
             Thread.currentThread().interrupt();
         }

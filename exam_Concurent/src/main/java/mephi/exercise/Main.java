@@ -17,17 +17,16 @@ public class Main {
                 1L,  // keepAliveTime
                 TimeUnit.SECONDS,
                 10,  // queueSize
-                1,   // minSpareThreads
+                2,   // minSpareThreads
                 new CustomThreadFactory()
         );
         for (int i = 0; i < 50; i++) {
             pool.execute(Main::exampleTask);
         }
-//        executor.shutdown();
         for (int i = 0; i < 50; i++) {
             Future<String> future = pool.submit(Main::exampleFutureTask);
         }
-//        Thread.sleep(1000);
+        TimeUnit.SECONDS.sleep(10);
         pool.shutdown();
     }
 

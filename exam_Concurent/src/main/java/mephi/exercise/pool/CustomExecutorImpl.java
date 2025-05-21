@@ -19,6 +19,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
 
+/**
+ * Кастомная реализация пула потоков
+ */
 @Slf4j
 public class CustomExecutorImpl implements CustomExecutor {
 
@@ -28,8 +31,8 @@ public class CustomExecutorImpl implements CustomExecutor {
     private final TimeUnit timeUnit;
     private final int queueSize;
     private final int minSpareThreads;
-    private final ThreadFactory threadFactory;
-    private final RejectedExecutionHandler rejectionHandler;
+    private final ThreadFactory threadFactory = new CustomThreadFactory();
+    private final RejectedExecutionHandler rejectionHandler = new CustomRejectionHandler();
 
     private final ReentrantLock mainLock = new ReentrantLock();
     private final AtomicInteger activeThreads = new AtomicInteger(0);
@@ -40,7 +43,7 @@ public class CustomExecutorImpl implements CustomExecutor {
     private LoadBalancer balancer;
 
     public CustomExecutorImpl(int corePoolSize, int maxPoolSize, long keepAliveTime, TimeUnit timeUnit, int queueSize,
-                              int minSpareThreads, ThreadFactory threadFactory) {
+                              int minSpareThreads) {
         if (corePoolSize < 0 || maxPoolSize <= 0 || maxPoolSize < corePoolSize ||
                 keepAliveTime < 0 || queueSize <= 0 || minSpareThreads < 0) {
             throw new IllegalArgumentException("Invalid thread pool parameters");
@@ -52,18 +55,21 @@ public class CustomExecutorImpl implements CustomExecutor {
         this.timeUnit = timeUnit;
         this.queueSize = queueSize;
         this.minSpareThreads = minSpareThreads;
-        this.threadFactory = threadFactory;
-        this.rejectionHandler = new CustomRejectionHandler();
 
         init();
     }
 
     private void init() {
-        workers = new HashMap<>(maxPoolSize);
-        queues = new HashMap<>(maxPoolSize);
-        balancer = new LoadBalancer(workers);
-        for (int i = 0; i < corePoolSize; i++) {
-            startNewWorker();
+        mainLock.lock();
+        try {
+            workers = new HashMap<>(maxPoolSize);
+            queues = new HashMap<>(maxPoolSize);
+            balancer = new LoadBalancer(workers);
+            for (int i = 0; i < corePoolSize; i++) {
+                startNewWorker();
+            }
+        } finally {
+            mainLock.unlock();
         }
     }
 
@@ -92,7 +98,9 @@ public class CustomExecutorImpl implements CustomExecutor {
         mainLock.lock();
         try {
             // Ищем ожидающих
-            final var count = waitingWorkersCount();
+            final var count = workers.values().stream()
+                    .filter(worker -> Status.WAITING.equals(worker.getStatus()))
+                    .count();
 
             log.info("Count of waiting workers = {}, min of waiting workers = {}", count, minSpareThreads);
             if (count > minSpareThreads) {
@@ -106,12 +114,6 @@ public class CustomExecutorImpl implements CustomExecutor {
         } finally {
             mainLock.unlock();
         }
-    }
-
-    private long waitingWorkersCount() {
-        return workers.values().stream()
-                .filter(worker -> Status.WAITING.equals(worker.getStatus()))
-                .count();
     }
 
     @Override
@@ -182,6 +184,9 @@ public class CustomExecutorImpl implements CustomExecutor {
         }
     }
 
+    /**
+     * Класс-баллансер для распределения нагрузки между потоками
+     */
     @RequiredArgsConstructor
     public static class LoadBalancer {
         private final Map<Integer, Worker> threads;
@@ -213,6 +218,9 @@ public class CustomExecutorImpl implements CustomExecutor {
         }
     }
 
+    /**
+     * Класс-обертка, добавляет функциональность изменения количества активных потоков
+     */
     @RequiredArgsConstructor
     private class TaskWrapper implements Runnable {
 
@@ -229,6 +237,9 @@ public class CustomExecutorImpl implements CustomExecutor {
         }
     }
 
+    /**
+     * Обработчик отказа выполнения задач
+     */
     private static class CustomRejectionHandler implements RejectedExecutionHandler {
 
         @Override

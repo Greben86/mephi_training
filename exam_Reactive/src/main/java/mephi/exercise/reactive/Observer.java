@@ -1,4 +1,4 @@
-package mephi.exercise;
+package mephi.exercise.reactive;
 
 public interface Observer<T> {
     Observer<T> onNext(T item);

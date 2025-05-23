@@ -1,4 +1,4 @@
-package mephi.exercise.reactive;
+package mephi.exercise.reactive.schedulers;
 
 public interface Scheduler {
 

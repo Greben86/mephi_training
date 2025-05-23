@@ -1,73 +1,63 @@
 package mephi.exercise;
 
-import lombok.SneakyThrows;
-import mephi.exercise.reactive.Disposable;
+import lombok.extern.slf4j.Slf4j;
 import mephi.exercise.reactive.Observable;
+import mephi.exercise.reactive.schedulers.ComputationScheduler;
+import mephi.exercise.reactive.schedulers.IOThreadScheduler;
 
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+@Slf4j
 public class Main {
-    @SneakyThrows
+
     public static void main(String[] args) {
-        // Create schedulers
-//        IOThreadScheduler ioScheduler = new IOThreadScheduler();
-//        ComputationScheduler computationScheduler = new ComputationScheduler();
-//        SingleThreadScheduler singleThreadScheduler = new SingleThreadScheduler();
-
-        // Example 1: Using flatMap to transform and flatten
-        System.out.println("\nExample 1: Using flatMap");
-        Observable<Integer> numbers = Observable.create(observer -> {
-            try {
-                for (int i = 1; i <= 3; i++) {
-                    observer.onNext(i);
-                }
-                observer.onComplete();
-            } catch (Exception e) {
-                observer.onError(e);
-            }
-        });
-
-        Disposable disposable = numbers
-                .flatMap(number -> Observable.create(observer -> {
+        log.info("Using flatMap");
+        new Observable<Integer>(observer -> {
                     try {
-                        // Simulate some work
-                        Thread.sleep(100);
-                        observer.onNext(number * 10);
-                        observer.onNext(number * 20);
-                        observer.onComplete();
+                        observer.onNext(1)
+                                .onNext(2)
+                                .onNext(3)
+                                .onComplete();
+                    } catch (Exception e) {
+                        observer.onError(e);
+                    }
+                })
+                .flatMap(number -> new Observable<Integer>(observer -> {
+                    try {
+                        TimeUnit.MILLISECONDS.sleep(100);
+                        observer.onNext(number * 10)
+                                .onNext(number * 20)
+                                .onComplete();
                     } catch (Exception e) {
                         observer.onError(e);
                     }
                 }))
                 .subscribe(
-                        item -> System.out.println("FlatMap result: " + item),
-                        error -> System.out.println("Error: " + error.getMessage()),
-                        () -> System.out.println("FlatMap completed!")
+                        item -> log.info("FlatMap result: {}", item),
+                        error -> log.info("Error: {}", error.getMessage()),
+                        () -> log.info("FlatMap completed!")
                 );
 
-        // Example 2: Error handling
-        System.out.println("\nExample 2: Error handling");
-        Observable.create(observer -> {
+        log.info("Error handling");
+        new Observable<Integer>(observer -> {
                     try {
-                        observer.onNext(1);
-                        observer.onNext(2);
+                        observer.onNext(1)
+                                .onNext(2);
                         throw new RuntimeException("Simulated error");
                     } catch (Exception e) {
                         observer.onError(e);
                     }
                 })
                 .subscribe(
-                        item -> System.out.println("Received: " + item),
-                        error -> System.out.println("Error handled: " + error.getMessage()),
-                        () -> System.out.println("This won't be called due to error")
+                        item -> log.info("Task: {}", item),
+                        error -> log.info("Error: {}", error.getMessage()),
+                        () -> log.info("Complete")
                 );
 
-        // Example 3: Disposable usage
-        System.out.println("\nExample 3: Disposable usage");
-        Observable<Integer> infinite = Observable.create(observer -> {
+        log.info("Disposable usage");
+        final var infinite = new Observable<Integer>(observer -> {
             int i = 0;
-            while (true) {
+            for (;;) {
                 observer.onNext(i++);
                 try {
                     TimeUnit.MILLISECONDS.sleep(100);
@@ -77,36 +67,27 @@ public class Main {
             }
         });
 
-        Disposable infiniteDisposable = infinite
-                .subscribeOn(task -> {
-                    final var executor = Executors.newCachedThreadPool();
-                    executor.execute(task);
-                })
-                .observeOn(task -> {
-                    final int processors = Runtime.getRuntime().availableProcessors();
-                    final var executor = Executors.newFixedThreadPool(processors);
-                    executor.execute(task);
-                })
+        final var infiniteDisposable = infinite
+                .subscribeOn(new IOThreadScheduler())
+                .observeOn(new ComputationScheduler(Runtime.getRuntime().availableProcessors()))
                 .subscribe(
-                        item -> System.out.println("Infinite: " + item),
-                        error -> System.out.println("Error: " + error.getMessage()),
-                        () -> System.out.println("This won't be called")
+                        item -> log.info("Task: {}", item),
+                        error -> log.info("Error: {}", error.getMessage()),
+                        () -> log.info("Complete")
                 );
 
-        // Wait for a while and then dispose
         try {
-            Thread.sleep(500);
+            TimeUnit.MILLISECONDS.sleep(500);
             infiniteDisposable.dispose();
-            System.out.println("Infinite stream disposed");
+            log.info("Stream disposed");
         } catch (InterruptedException e) {
-            e.printStackTrace();
+            log.error(e.getMessage(), e);
         }
 
-        // Wait for all operations to complete
         try {
-            Thread.sleep(1000);
+            TimeUnit.MILLISECONDS.sleep(1000);
         } catch (InterruptedException e) {
-            e.printStackTrace();
+            log.error(e.getMessage(), e);
         }
     }
 }

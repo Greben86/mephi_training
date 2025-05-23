@@ -1,75 +1,70 @@
 package mephi.exercise.reactive;
 
-import java.util.LinkedList;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import mephi.exercise.reactive.schedulers.Scheduler;
+
+import java.util.Set;
+import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
+@Slf4j
+@RequiredArgsConstructor
 public class Observable<T> {
+    private static final AtomicInteger OBSERVABLE_COUNTER = new AtomicInteger(0);
+    private static final Set<Integer> OBSERVABLE_SET = new CopyOnWriteArraySet<>();
+
+    private final int ID = OBSERVABLE_COUNTER.incrementAndGet();
     private final Consumer<Observer<T>> source;
 
-    private final List<Observer<T>> observerList = new LinkedList<>();
+    private Disposable subscribe(Observer<T> observer) {
+        final var id = OBSERVABLE_COUNTER.incrementAndGet();
+        OBSERVABLE_SET.add(id);
+        final var proxyObserver = new AbstractObserver<T>(id) {
+            @Override
+            public Observer<T> onNext(T item) {
+                if (OBSERVABLE_SET.contains(getId())) {
+                    observer.onNext(item);
+                }
 
-    public Observable(final Consumer<Observer<T>> source) {
-        this.source = source;
-    }
+                return this;
+            }
 
-    public static <R> Observable<R> create(final Consumer<Observer<R>> source) {
-        return new Observable<>(source);
-    }
+            @Override
+            public Observer<T> onError(Throwable t) {
+                if (OBSERVABLE_SET.contains(getId())) {
+                    observer.onError(t);
+                }
 
-    public Disposable subscribe(Observer<T> observer) {
-        final var disposed = new AtomicBoolean(false);
+                return this;
+            }
+
+            @Override
+            public void onComplete() {
+                if (OBSERVABLE_SET.contains(getId())) {
+                    observer.onComplete();
+                }
+            }
+        };
+
         try {
-            source.accept(new Observer<T>() {
-                @Override
-                public Observer<T> onNext(T item) {
-                    if (!disposed.get()) {
-                        observer.onNext(item);
-                    }
-
-                    return this;
-                }
-
-                @Override
-                public Observer<T> onError(Throwable t) {
-                    if (!disposed.get()) {
-                        observer.onError(t);
-                    }
-
-                    return this;
-                }
-
-                @Override
-                public void onComplete() {
-                    if (!disposed.get()) {
-                        observer.onComplete();
-                    }
-                }
-            });
+            source.accept(proxyObserver);
         } catch (Exception e) {
-            if (!disposed.get()) {
+            if (OBSERVABLE_SET.contains(proxyObserver.getId())) {
                 observer.onError(e);
             }
         }
 
-        return new Disposable() {
-            @Override
-            public void dispose() {
-                disposed.set(true);
-            }
-
-            @Override
-            public boolean isDisposed() {
-                return disposed.get();
-            }
+        return () -> {
+            OBSERVABLE_SET.remove(id);
         };
     }
 
     public Disposable subscribe(Consumer<T> onNext, Consumer<Throwable> onError, Runnable onComplete) {
-        return subscribe(new Observer<T>() {
+        final var observer = new Observer<T>() {
             @Override
             public Observer<T> onNext(T item) {
                 onNext.accept(item);
@@ -88,7 +83,9 @@ public class Observable<T> {
             public void onComplete() {
                 onComplete.run();
             }
-        });
+        };
+
+        return subscribe(observer);
     }
 
     public <R> Observable<R> map(Function<T, R> functionMap) {
@@ -101,12 +98,48 @@ public class Observable<T> {
                         } catch (Exception e) {
                             observer.onError(e);
                         }
+
                         return this;
                     }
 
                     @Override
                     public Observer<T> onError(Throwable t) {
                         observer.onError(t);
+
+                        return this;
+                    }
+
+                    @Override
+                    public void onComplete() {
+                        observer.onComplete();
+                    }
+                }
+        ));
+    }
+
+    public <R> Observable<R> flatMap(Function<T, Observable<R>> mapper) {
+        return new Observable<>(observer -> subscribe(
+                new Observer<>() {
+                    @Override
+                    public Observer<T> onNext(T item) {
+                        try {
+                            Observable<R> innerObservable = mapper.apply(item);
+                            innerObservable.subscribe(
+                                    observer::onNext,
+                                    observer::onError,
+                                    () -> {} // Don't complete when inner completes
+                            );
+                        } catch (Exception e) {
+                            observer.onError(e);
+                        }
+
+                        return this;
+                    }
+
+                    @Override
+                    public Observer<T> onError(Throwable t) {
+                        observer.onError(t);
+
                         return this;
                     }
 
@@ -120,42 +153,33 @@ public class Observable<T> {
 
     public Observable<T> filter(Predicate<T> predicate) {
         return new Observable<>(observer -> subscribe(
-                item -> {
-                    try {
-                        if (predicate.test(item)) {
-                            observer.onNext(item);
-                        }
-                    } catch (Exception e) {
-                        observer.onError(e);
-                    }
-                },
-                observer::onError,
-                observer::onComplete
-        ));
-    }
-
-    public <R> Observable<R> flatMap(Function<T, Observable<R>> mapper) {
-        return new Observable<>(observer -> {
-            AtomicBoolean disposed = new AtomicBoolean(false);
-            subscribe(
-                    item -> {
-                        if (!disposed.get()) {
-                            try {
-                                Observable<R> innerObservable = mapper.apply(item);
-                                innerObservable.subscribe(
-                                        observer::onNext,
-                                        observer::onError,
-                                        () -> {} // Don't complete when inner completes
-                                );
-                            } catch (Exception e) {
-                                observer.onError(e);
+                new Observer<>() {
+                    @Override
+                    public Observer<T> onNext(T item) {
+                        try {
+                            if (predicate.test(item)) {
+                                observer.onNext(item);
                             }
+                        } catch (Exception e) {
+                            observer.onError(e);
                         }
-                    },
-                    observer::onError,
-                    observer::onComplete
-            );
-        });
+
+                        return this;
+                    }
+
+                    @Override
+                    public Observer<T> onError(Throwable t) {
+                        observer.onError(t);
+
+                        return this;
+                    }
+
+                    @Override
+                    public void onComplete() {
+                        observer.onComplete();
+                    }
+                }
+        ));
     }
 
     public Observable<T> subscribeOn(Scheduler scheduler) {

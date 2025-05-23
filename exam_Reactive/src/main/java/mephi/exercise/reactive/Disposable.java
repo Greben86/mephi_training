@@ -1,15 +1,13 @@
 package mephi.exercise.reactive;
 
+/**
+ * Интерфейс, позволяющий отменять подписку
+ */
+@FunctionalInterface
 public interface Disposable {
 
     /**
-     * Disposes the resource, the operation should be idempotent.
+     * Метод для отписки
      */
     void dispose();
-
-    /**
-     * Returns true if this resource has been disposed.
-     * @return true if this resource has been disposed
-     */
-    boolean isDisposed();
 }

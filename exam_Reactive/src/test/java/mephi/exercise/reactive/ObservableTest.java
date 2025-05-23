@@ -1,6 +1,6 @@
 package mephi.exercise.reactive;
 
-import mephi.exercise.reactive.schedulers.ComputationScheduler;
+import mephi.exercise.reactive.schedulers.IOThreadScheduler;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -136,7 +136,7 @@ class ObservableTest {
                 Thread.currentThread().interrupt();
             }
         })
-        .observeOn(new ComputationScheduler(Runtime.getRuntime().availableProcessors()))
+        .subscribeOn(new IOThreadScheduler())
         .subscribe(
             item -> {},
             error -> Assertions.fail("Unexpected error"),

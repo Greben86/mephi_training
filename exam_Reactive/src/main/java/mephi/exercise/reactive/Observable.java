@@ -183,14 +183,27 @@ public class Observable<T> {
     }
 
     public Observable<T> subscribeOn(Scheduler scheduler) {
-        return new Observable<>(observer -> scheduler.execute(() -> subscribe(observer)));
+        return new Observable<>(observer -> {
+            if (observer instanceof AbstractObserver) {
+                OBSERVABLE_SET.remove(((AbstractObserver<?>) observer).getId());
+            }
+
+            scheduler.execute(() -> subscribe(observer));
+        });
     }
 
     public Observable<T> observeOn(Scheduler scheduler) {
-        return new Observable<>(observer -> subscribe(
+        return new Observable<>(observer -> {
+            if (observer instanceof AbstractObserver) {
+                OBSERVABLE_SET.remove(((AbstractObserver<?>) observer).getId());
+            }
+
+            subscribe(
                 item -> scheduler.execute(() -> observer.onNext(item)),
                 error -> scheduler.execute(() -> observer.onError(error)),
                 () -> scheduler.execute(observer::onComplete)
-        ));
+            );
+
+        });
     }
 }

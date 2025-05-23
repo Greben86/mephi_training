@@ -35,7 +35,7 @@ public class Main {
                 .subscribe(
                         item -> log.info("FlatMap result: {}", item),
                         error -> log.info("Error: {}", error.getMessage()),
-                        () -> log.info("FlatMap completed!")
+                        () -> log.info("FlatMap done!")
                 );
 
         log.info("Error handling");
@@ -43,7 +43,7 @@ public class Main {
                     try {
                         observer.onNext(1)
                                 .onNext(2);
-                        throw new RuntimeException("Simulated error");
+                        throw new RuntimeException("Fake error");
                     } catch (Exception e) {
                         observer.onError(e);
                     }
@@ -51,11 +51,11 @@ public class Main {
                 .subscribe(
                         item -> log.info("Task: {}", item),
                         error -> log.info("Error: {}", error.getMessage()),
-                        () -> log.info("Complete")
+                        () -> log.info("Done")
                 );
 
         log.info("Disposable usage");
-        final var infinite = new Observable<Integer>(observer -> {
+        final var disposableStream = new Observable<Integer>(observer -> {
             int i = 0;
             for (;;) {
                 observer.onNext(i++);
@@ -65,20 +65,18 @@ public class Main {
                     throw new RuntimeException(e);
                 }
             }
-        });
-
-        final var infiniteDisposable = infinite
-                .subscribeOn(new IOThreadScheduler())
-                .observeOn(new ComputationScheduler(Runtime.getRuntime().availableProcessors()))
-                .subscribe(
-                        item -> log.info("Task: {}", item),
-                        error -> log.info("Error: {}", error.getMessage()),
-                        () -> log.info("Complete")
-                );
+        })
+        .subscribeOn(new IOThreadScheduler())
+        .observeOn(new ComputationScheduler(Runtime.getRuntime().availableProcessors()))
+        .subscribe(
+                item -> log.info("Task: {}", item),
+                error -> log.info("Error: {}", error.getMessage()),
+                () -> log.info("Complete")
+        );
 
         try {
             TimeUnit.MILLISECONDS.sleep(500);
-            infiniteDisposable.dispose();
+            disposableStream.dispose();
             log.info("Stream disposed");
         } catch (InterruptedException e) {
             log.error(e.getMessage(), e);
